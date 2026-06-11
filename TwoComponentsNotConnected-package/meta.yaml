@@ -7,6 +7,14 @@ proofLakefilePath: lakefile.lean
 proofLeanToolchainPath: lean-toolchain
 bibtex-entries: []
 statements:
+  - Name: ConnectedRelation
+    Type: Definition
+    Statement:
+      CurrentSubmission: true
+      LeanStatement: statement-package/TwoComponentsNotConnected/Statements/ConnectedRelation.lean
+      LatexDefinition: statement-package/TwoComponentsNotConnected/Statements/ConnectedRelation.tex
+      Name: TwoComponentsNotConnected.Statements.ConnectedRelation.IsConnectedRelation
+    DeclarationReferences: []
   - Name: TwoComponentsDisconnected
     Type: Axiom
     Statement:
