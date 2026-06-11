@@ -1,0 +1,28 @@
+abstractPath: abstract.tex
+submissionTitle: Two Components Are Not Connected
+submissionSlug: TwoComponentsNotConnected
+statementLakefilePath: statement-package/lakefile.lean
+statementLeanToolchainPath: statement-package/lean-toolchain
+proofLakefilePath: lakefile.lean
+proofLeanToolchainPath: lean-toolchain
+bibtex-entries: []
+statements:
+  - Name: TwoComponentsDisconnected
+    Type: Axiom
+    Statement:
+      CurrentSubmission: true
+      LeanStatement: statement-package/TwoComponentsNotConnected/Statements/TwoComponentsDisconnected.lean
+      LatexDefinition: statement-package/TwoComponentsNotConnected/Statements/TwoComponentsDisconnected.tex
+      Name: TwoComponentsNotConnected.Statements.TwoComponentsDisconnected.two_components_not_connected
+    DeclarationReferences: []
+proofs:
+  - Name: TwoComponentsDisconnectedProof
+    Type: proof
+    Theorem:
+      SubmissionSlug: TwoComponentsNotConnected
+      File: statement-package/TwoComponentsNotConnected/Statements/TwoComponentsDisconnected.lean
+      Name: TwoComponentsNotConnected.Statements.TwoComponentsDisconnected.two_components_not_connected
+    Proof:
+      File: proofs/TwoComponentsNotConnected/Proofs/TwoComponentsDisconnectedProof.lean
+      Name: TwoComponentsNotConnected.Proofs.TwoComponentsDisconnected.two_components_not_connected
+    DeclarationReferences: []
