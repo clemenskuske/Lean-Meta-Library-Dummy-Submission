@@ -22,7 +22,11 @@ statements:
       LeanStatement: statement-package/TwoComponentsNotConnected/Statements/TwoComponentsDisconnected.lean
       LatexDefinition: statement-package/TwoComponentsNotConnected/Statements/TwoComponentsDisconnected.tex
       Name: TwoComponentsNotConnected.Statements.TwoComponentsDisconnected.two_components_not_connected
-    DeclarationReferences: []
+    DeclarationReferences:
+      - CurrentSubmission: true
+        LeanStatement: statement-package/TwoComponentsNotConnected/Statements/ConnectedRelation.lean
+        LatexDefinition: statement-package/TwoComponentsNotConnected/Statements/ConnectedRelation.tex
+        Name: TwoComponentsNotConnected.Statements.ConnectedRelation.IsConnectedRelation
 proofs:
   - Name: TwoComponentsDisconnectedProof
     Type: proof
@@ -33,4 +37,8 @@ proofs:
     Proof:
       File: proofs/TwoComponentsNotConnected/Proofs/TwoComponentsDisconnectedProof.lean
       Name: TwoComponentsNotConnected.Proofs.TwoComponentsDisconnected.two_components_not_connected
-    DeclarationReferences: []
+    DeclarationReferences:
+      - CurrentSubmission: true
+        LeanStatement: statement-package/TwoComponentsNotConnected/Statements/ConnectedRelation.lean
+        LatexDefinition: statement-package/TwoComponentsNotConnected/Statements/ConnectedRelation.tex
+        Name: TwoComponentsNotConnected.Statements.ConnectedRelation.IsConnectedRelation
