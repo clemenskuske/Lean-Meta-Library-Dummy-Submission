@@ -34,4 +34,4 @@ ProofSubmissions:
       AxiomReference: TwoComponentsNotConnected.Statements.TwoComponentsDisconnected.two_components_not_connected
 submissionIssueNumber: 1
 submissionIssueUrl: "https://github.com/clemenskuske/Lean-Meta-Library/issues/1"
-Commit: "ba5be1f5b35dec1b3524d831bd5d1ecf5e2ca249"
+Commit: "98e3267f20ca1c8407819072a29733075c3e2324"
