@@ -1,0 +1,34 @@
+AbstractPath: abstract.tex
+LicenseFile: LICENSE
+SubmissionName: Two Components Are Not Connected
+SubmissionSlug: TwoComponentsNotConnected
+BibEntries:
+  - |
+    @inbook{Diestel2017Connectivity,
+      author = {Diestel, Reinhard},
+      title = {Connectivity},
+      booktitle = {Graph Theory},
+      series = {Graduate Texts in Mathematics},
+      volume = {173},
+      publisher = {Springer Berlin Heidelberg},
+      address = {Berlin, Heidelberg},
+      year = {2017},
+      pages = {59--87},
+      isbn = {978-3-662-53622-3},
+      doi = {10.1007/978-3-662-53622-3_3},
+      url = {https://doi.org/10.1007/978-3-662-53622-3_3}
+    }
+StatementSubmissions:
+  rootFolder: statement-package
+  statements:
+    - Name: TwoComponentsNotConnected.Statements.ConnectedRelation.IsConnectedRelation
+      Type: Definition
+    - Name: TwoComponentsNotConnected.Statements.TwoComponentsDisconnected.two_components_not_connected
+      Type: Axiom
+      SemanticDependencies:
+        - TwoComponentsNotConnected.Statements.ConnectedRelation.IsConnectedRelation
+ProofSubmissions:
+  rootFolder: .
+  proofs:
+    - Name: TwoComponentsNotConnected.Proofs.TwoComponentsDisconnected.two_components_not_connected
+      AxiomReference: TwoComponentsNotConnected.Statements.TwoComponentsDisconnected.two_components_not_connected

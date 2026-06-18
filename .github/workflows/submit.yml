@@ -1,0 +1,309 @@
+name: Submit
+
+on:
+  workflow_dispatch:
+    inputs:
+      manifest_path:
+        description: Path to the submission manifest file.
+        required: false
+        default: manifest.yaml
+        type: string
+  workflow_call:
+    inputs:
+      manifest_path:
+        description: Path to the submission manifest file.
+        required: false
+        default: manifest.yaml
+        type: string
+    outputs:
+      issue-number:
+        description: Created or updated submission issue number.
+        value: ${{ jobs.submit.outputs.issue-number }}
+      issue-url:
+        description: Created or updated submission issue URL.
+        value: ${{ jobs.submit.outputs.issue-url }}
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  submit:
+    name: Create or update submission issue
+    runs-on: ubuntu-latest
+    outputs:
+      issue-number: ${{ steps.submit.outputs.issue-number }}
+      issue-url: ${{ steps.submit.outputs.issue-url }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create or update issue
+        id: submit
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_SERVER_URL: ${{ github.server_url }}
+          MANIFEST_PATH: ${{ inputs.manifest_path }}
+          SOURCE_BRANCH: ${{ github.ref_name }}
+          SOURCE_COMMIT: ${{ github.sha }}
+          SUBMITTER_ID: ${{ github.actor_id }}
+          SUBMITTER_LOGIN: ${{ github.actor }}
+        run: |
+          node <<'NODE'
+          const { existsSync, readFileSync, writeFileSync } = require("node:fs");
+          const { dirname, resolve } = require("node:path");
+
+          const token = process.env.GITHUB_TOKEN;
+          const repository = process.env.GITHUB_REPOSITORY;
+          const serverUrl = process.env.GITHUB_SERVER_URL;
+          const lmlEnv = readJsonIfExists("lml-env.json") ?? {};
+          const defaultManifestPath = lmlEnv.submission?.defaultManifestPath ?? "manifest.yaml";
+          const manifestPath = process.env.MANIFEST_PATH || defaultManifestPath;
+          const sourceBranch = process.env.SOURCE_BRANCH;
+          const sourceCommit = process.env.SOURCE_COMMIT;
+          const submitterLogin = process.env.SUBMITTER_LOGIN;
+          const submitterId = process.env.SUBMITTER_ID;
+          const repoUrl = `${serverUrl}/${repository}`;
+          const label = "submission";
+          const [owner, repo] = repository.split("/");
+          const apiBase = "https://api.github.com";
+          const issueNumberField = "submissionIssueNumber";
+          const issueUrlField = "submissionIssueUrl";
+          let issueAbstract = null;
+
+          main().catch((error) => {
+            console.error(error.message);
+            process.exit(1);
+          });
+
+          async function main() {
+            if (!token) {
+              throw new Error("GITHUB_TOKEN is required.");
+            }
+            if (!existsSync(manifestPath)) {
+              throw new Error(`manifest file not found: ${resolve(manifestPath)}`);
+            }
+
+            let manifestText = readFileSync(manifestPath, "utf8");
+            const issueNumberValue = readTopLevelScalar(manifestText, issueNumberField);
+            const issueNumber = issueNumberValue ? Number.parseInt(issueNumberValue, 10) : null;
+            const submissionName = readTopLevelScalar(manifestText, "SubmissionName");
+            const submissionSlug = readTopLevelScalar(manifestText, "SubmissionSlug");
+            const abstractPath = readTopLevelScalar(manifestText, "AbstractPath");
+            const title = submissionName || submissionSlug || manifestPath;
+            issueAbstract = readAbstract(manifestPath, abstractPath);
+
+            await ensureLabel();
+
+            let issue;
+            if (issueNumber) {
+              issue = await updateIssue(issueNumber, { title, body: issueBody() });
+            } else {
+              issue = await createIssue({ title, body: issueBody(), labels: [label] });
+            }
+
+            await addLabel(issue.number);
+
+            manifestText = setTopLevelScalar(manifestText, issueNumberField, String(issue.number));
+            manifestText = setTopLevelScalar(manifestText, issueUrlField, issue.html_url);
+            if (sourceCommit) {
+              manifestText = setTopLevelScalar(manifestText, "Commit", sourceCommit);
+            }
+            writeFileSync(manifestPath, manifestText);
+            issue = await updateIssue(issue.number, { title, body: issueBody() });
+
+            appendOutput("issue-number", String(issue.number));
+            appendOutput("issue-url", issue.html_url);
+
+            if (process.env.GITHUB_STEP_SUMMARY) {
+              writeFileSync(
+                process.env.GITHUB_STEP_SUMMARY,
+                `Created or updated submission issue: ${issue.html_url}\n`,
+                { flag: "a" }
+              );
+            }
+          }
+
+          function issueBody() {
+            const lines = [
+              issueAbstract,
+              "",
+              "<!-- lean-meta-library:submission -->",
+              "",
+              "## Source",
+              "",
+              `- Submitted By: ${submitterLogin || "unknown"}`,
+              `- Repo Url: ${repoUrl}`,
+              `- Source Branch: ${sourceBranch}`,
+              `- Source Commit: ${sourceCommit}`,
+              `- Manifest File: ${manifestPath}`,
+              `- Manifest Url: ${repoBlobUrl(manifestPath)}`
+            ];
+            const abstractPath = readTopLevelScalar(readFileSync(manifestPath, "utf8"), "AbstractPath");
+            if (abstractPath) {
+              lines.push(`- Abstract Url: ${repoBlobUrl(resolveManifestRelativePath(manifestPath, abstractPath))}`);
+            }
+            if (submitterId) {
+              lines.splice(lines.indexOf(`- Repo Url: ${repoUrl}`), 0, `- Submitter Id: ${submitterId}`);
+            }
+            return lines.join("\n");
+          }
+
+          function readAbstract(manifestPath, abstractPathValue) {
+            if (!abstractPathValue) {
+              return "_No abstract file is recorded in the submission manifest._";
+            }
+            const abstractPath = resolve(dirname(manifestPath), abstractPathValue);
+            if (!existsSync(abstractPath)) {
+              return `_Abstract file not found: ${abstractPathValue}_`;
+            }
+            const text = readFileSync(abstractPath, "utf8").trim();
+            return text || "_The recorded abstract file is empty._";
+          }
+
+          function readJsonIfExists(path) {
+            if (!existsSync(path)) {
+              return null;
+            }
+            return JSON.parse(readFileSync(path, "utf8"));
+          }
+
+          function resolveManifestRelativePath(manifestPath, relativePathValue) {
+            return `${dirname(manifestPath).replace(/^\.$/, "")}/${relativePathValue}`.replace(/^\/+/, "").replace(/\/+/g, "/");
+          }
+
+          function repoBlobUrl(pathValue) {
+            const normalized = String(pathValue ?? "").replace(/^\.\/+/, "").replace(/\\/g, "/");
+            return `${repoUrl}/blob/${sourceCommit}/${normalized}`;
+          }
+
+          function readTopLevelScalar(text, key) {
+            const match = text.match(new RegExp(`^${escapeRegExp(key)}:\\s*(.*?)\\s*$`, "m"));
+            if (!match) {
+              return null;
+            }
+            return unquoteYamlScalar(match[1].trim());
+          }
+
+          function setTopLevelScalar(text, key, value) {
+            const line = `${key}: ${quoteYamlScalar(value)}`;
+            const pattern = new RegExp(`^${escapeRegExp(key)}:\\s*.*$`, "m");
+            if (pattern.test(text)) {
+              return text.replace(pattern, line);
+            }
+
+            const insertionPoint = text.search(/^declarations:/m);
+            if (insertionPoint >= 0) {
+              const prefix = text.slice(0, insertionPoint);
+              const suffix = text.slice(insertionPoint);
+              return `${ensureTrailingNewline(prefix)}${line}\n${suffix}`;
+            }
+
+            return `${ensureTrailingNewline(text)}${line}\n`;
+          }
+
+          function quoteYamlScalar(value) {
+            return JSON.stringify(String(value));
+          }
+
+          function unquoteYamlScalar(value) {
+            if (
+              (value.startsWith("\"") && value.endsWith("\"")) ||
+              (value.startsWith("'") && value.endsWith("'"))
+            ) {
+              return value.slice(1, -1);
+            }
+            return value;
+          }
+
+          function ensureTrailingNewline(text) {
+            return text.endsWith("\n") ? text : `${text}\n`;
+          }
+
+          function escapeRegExp(value) {
+            return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+          }
+
+          function appendOutput(name, value) {
+            if (process.env.GITHUB_OUTPUT) {
+              writeFileSync(process.env.GITHUB_OUTPUT, `${name}=${value}\n`, { flag: "a" });
+            }
+          }
+
+          async function ensureLabel() {
+            const existing = await github("GET", `/repos/${owner}/${repo}/labels/${encodeURIComponent(label)}`, null, {
+              allowNotFound: true
+            });
+            if (existing) {
+              return;
+            }
+            await github("POST", `/repos/${owner}/${repo}/labels`, {
+              name: label,
+              color: "0E8A16",
+              description: "Lean Meta Library submission"
+            });
+          }
+
+          async function createIssue(payload) {
+            return github("POST", `/repos/${owner}/${repo}/issues`, payload);
+          }
+
+          async function updateIssue(number, payload) {
+            const updated = await github("PATCH", `/repos/${owner}/${repo}/issues/${number}`, payload, {
+              allowNotFound: true
+            });
+            if (!updated) {
+              return createIssue({ ...payload, labels: [label] });
+            }
+            return updated;
+          }
+
+          async function addLabel(number) {
+            await github("POST", `/repos/${owner}/${repo}/issues/${number}/labels`, {
+              labels: [label]
+            });
+          }
+
+          async function github(method, path, body, options = {}) {
+            const response = await fetch(`${apiBase}${path}`, {
+              method,
+              headers: {
+                Accept: "application/vnd.github+json",
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+                "X-GitHub-Api-Version": "2022-11-28"
+              },
+              body: body ? JSON.stringify(body) : undefined
+            });
+
+            if (options.allowNotFound && response.status === 404) {
+              return null;
+            }
+
+            if (!response.ok) {
+              const text = await response.text();
+              throw new Error(`${method} ${path} failed with ${response.status}: ${text}`);
+            }
+
+            return response.json();
+          }
+          NODE
+
+      - name: Commit manifest issue identifier
+        env:
+          META_PATH_INPUT: ${{ inputs.manifest_path }}
+          SOURCE_BRANCH: ${{ github.ref_name }}
+        run: |
+          MANIFEST_PATH="${META_PATH_INPUT:-$(node -e 'const fs = require("node:fs"); const env = fs.existsSync("lml-env.json") ? require("./lml-env.json") : {}; console.log(env.submission?.defaultManifestPath || "manifest.yaml")')}"
+          if git diff --quiet -- "$MANIFEST_PATH"; then
+            echo "manifest already contains the current submission issue identifier."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$MANIFEST_PATH"
+          git commit -m "Record submission issue"
+          git push origin HEAD:"$SOURCE_BRANCH"
