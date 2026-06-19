@@ -32,6 +32,6 @@ ProofSubmissions:
   proofs:
     - Name: TwoComponentsNotConnected.Proofs.TwoComponentsDisconnected.two_components_not_connected
       AxiomReference: TwoComponentsNotConnected.Statements.TwoComponentsDisconnected.two_components_not_connected
-submissionIssueNumber: "1"
-submissionIssueUrl: "https://github.com/clemenskuske/Lean-Meta-Library-Dummy-Submission/issues/1"
-Commit: "d984dc89f35bde25d6811691773bb70b92a79683"
+submissionIssueNumber: "5"
+submissionIssueUrl: "https://github.com/clemenskuske/Lean-Meta-Library/issues/5"
+Commit: "177e79345bf7c3a459f9741f75f0d14e2b40cb4a"
