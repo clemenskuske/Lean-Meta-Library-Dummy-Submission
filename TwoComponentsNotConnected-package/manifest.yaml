@@ -22,8 +22,10 @@ StatementSubmissions:
   rootFolder: statement-package
   statements:
     - Name: TwoComponentsNotConnected.Statements.ConnectedRelation.IsConnectedRelation
+      Title: Connected Reachability Relation
       Type: Definition
     - Name: TwoComponentsNotConnected.Statements.TwoComponentsDisconnected.two_components_not_connected
+      Title: Two Separated Components Are Not Connected
       Type: Axiom
       SemanticDependencies:
         - TwoComponentsNotConnected.Statements.ConnectedRelation.IsConnectedRelation
@@ -34,4 +36,4 @@ ProofSubmissions:
       AxiomReference: TwoComponentsNotConnected.Statements.TwoComponentsDisconnected.two_components_not_connected
 submissionIssueNumber: "5"
 submissionIssueUrl: "https://github.com/clemenskuske/Lean-Meta-Library/issues/5"
-Commit: "177e79345bf7c3a459f9741f75f0d14e2b40cb4a"
+Commit: "46a1ff95a5eecd89beb44483c862a7de72e413fd"
